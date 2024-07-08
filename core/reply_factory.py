@@ -30,9 +30,20 @@ def generate_bot_responses(message, session):
 
 def record_current_answer(answer, current_question_id, session):
     '''
-    Validates and stores the answer for the current question to django session.
+    Validates and stores the answer for the current question to Django session.
     '''
+    # Validate the answer
+    if not isinstance(answer, str) or not answer.strip():
+        return False, "Invalid answer. Please provide a non-empty string."
+
+    # Store the answer in the session
+    if 'answers' not in session:
+        session['answers'] = {}
+    session['answers'][str(current_question_id)] = answer
+    session.modified = True
+
     return True, ""
+
 
 
 def get_next_question(current_question_id):
@@ -48,5 +59,22 @@ def generate_final_response(session):
     Creates a final result message including a score based on the answers
     by the user for questions in the PYTHON_QUESTION_LIST.
     '''
+    if 'answers' not in session:
+        return "No answers recorded."
 
-    return "dummy result"
+    user_answers = session['answers']
+    total_questions = len(PYTHON_QUESTION_LIST)
+    correct_answers = 0
+
+    for index, question in enumerate(PYTHON_QUESTION_LIST):
+        question_id = str(index + 1)  # Assuming question IDs are 1-based indices
+        correct_answer = question['answer']
+        user_answer = user_answers.get(question_id, "")
+
+        if user_answer.strip().lower() == correct_answer.strip().lower():
+            correct_answers += 1
+
+    score = correct_answers / total_questions * 100
+    result_message = f"You answered {correct_answers} out of {total_questions} questions correctly. Your score is {score:.2f}%."
+
+    return result_message
